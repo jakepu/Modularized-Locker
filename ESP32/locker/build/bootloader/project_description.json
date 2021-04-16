@@ -1,0 +1,20 @@
+{
+    "project_name":       "bootloader",
+    "project_path":       "/home/jake/esp/esp-idf/components/bootloader/subproject",
+    "build_dir":          "/home/jake/esp/locker/build/bootloader",
+    "config_file":        "/home/jake/esp/locker/sdkconfig",
+    "config_defaults":    "",
+    "app_elf":            "bootloader.elf",
+    "app_bin":            "bootloader.bin",
+    "git_revision":       "v4.2-dirty",
+    "target":             "esp32",
+    "phy_data_partition": "",
+    "monitor_baud" :      "115200",
+    "monitor_toolprefix": "xtensa-esp32-elf-",
+    "config_environment" : {
+        "COMPONENT_KCONFIGS" : "/home/jake/esp/esp-idf/components/efuse/Kconfig;/home/jake/esp/esp-idf/components/esp32/Kconfig;/home/jake/esp/esp-idf/components/esp_common/Kconfig;/home/jake/esp/esp-idf/components/log/Kconfig;/home/jake/esp/esp-idf/components/spi_flash/Kconfig",
+        "COMPONENT_KCONFIGS_PROJBUILD" : "/home/jake/esp/esp-idf/components/bootloader/Kconfig.projbuild;/home/jake/esp/esp-idf/components/esptool_py/Kconfig.projbuild;/home/jake/esp/esp-idf/components/partition_table/Kconfig.projbuild"
+    },
+    "build_components" : [ "bootloader", "bootloader_support", "efuse", "esp32", "esp_common", "esp_rom", "esptool_py", "log", "main", "micro-ecc", "partition_table", "soc", "spi_flash", "xtensa", "" ],
+    "build_component_paths" : [ "/home/jake/esp/esp-idf/components/bootloader", "/home/jake/esp/esp-idf/components/bootloader_support", "/home/jake/esp/esp-idf/components/efuse", "/home/jake/esp/esp-idf/components/esp32", "/home/jake/esp/esp-idf/components/esp_common", "/home/jake/esp/esp-idf/components/esp_rom", "/home/jake/esp/esp-idf/components/esptool_py", "/home/jake/esp/esp-idf/components/log", "/home/jake/esp/esp-idf/components/bootloader/subproject/main", "/home/jake/esp/esp-idf/components/bootloader/subproject/components/micro-ecc", "/home/jake/esp/esp-idf/components/partition_table", "/home/jake/esp/esp-idf/components/soc", "/home/jake/esp/esp-idf/components/spi_flash", "/home/jake/esp/esp-idf/components/xtensa", "" ]
+}
