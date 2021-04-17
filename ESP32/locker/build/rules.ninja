@@ -1422,7 +1422,7 @@ rule CXX_STATIC_LIBRARY_LINKER____idf_main
 # Rule for re-running cmake.
 
 rule RERUN_CMAKE
-  command = /usr/bin/cmake -S/home/jake/esp/locker -B/home/jake/esp/locker/build
+  command = /usr/bin/cmake -S/home/jake/Documents/Coding/Modularized-Locker/ESP32/locker -B/home/jake/Documents/Coding/Modularized-Locker/ESP32/locker/build
   description = Re-running CMake...
   generator = 1
 
@@ -1431,7 +1431,7 @@ rule RERUN_CMAKE
 # Rule for cleaning all built files.
 
 rule CLEAN
-  command = /home/jake/anaconda3/bin/ninja -t clean
+  command = /usr/bin/ninja -t clean
   description = Cleaning all built files...
 
 
@@ -1439,6 +1439,6 @@ rule CLEAN
 # Rule for printing all primary targets available.
 
 rule HELP
-  command = /home/jake/anaconda3/bin/ninja -t targets
+  command = /usr/bin/ninja -t targets
   description = All primary targets available:
 

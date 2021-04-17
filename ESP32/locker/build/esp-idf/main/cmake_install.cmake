@@ -1,4 +1,4 @@
-# Install script for directory: /home/jake/esp/locker/main
+# Install script for directory: /home/jake/Documents/Coding/Modularized-Locker/ESP32/locker/main
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

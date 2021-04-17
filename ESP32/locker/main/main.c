@@ -12,19 +12,20 @@
 #include "driver/gpio.h"
 
 // #define TAG "RS485_LOCKER_APP"
-#define GPIO_LOCK_EN    (12)        // dev kit pin
+#define GPIO_LOCK_EN    (23)        // dev kit pin
 // #define GPIO_LOCK_EN    (41)        // actual pin on PCB
 #define BAUD_RATE       (115200)
-#defind MSG_LEN         (6)
+#define MSG_LEN         (6)
 #define LOCK_OPEN_TICKS (1500 / portTICK_RATE_MS)
-#define UART_BUF_SIZE (127)
+#define UART_BUF_SIZE (256)
 #define UART_USED               UART_NUM_1
 // Read packet timeout
 #define PACKET_READ_TICS        (100 / portTICK_RATE_MS)
-#define UART_TASK_STACK_SIZE    (2048)
+#define UART_TASK_STACK_SIZE    (4096)
 #define UART_TASK_PRIO          (10)                        // max at 24
-#define ECHO_UART_PORT          (CONFIG_ECHO_UART_PORT_NUM)
+#define EVENT_QUEUE_SIZE        (20)
 
+static QueueHandle_t uart1_queue;
 
 static void uart_send(const int port, const char* str, uint8_t length) 
 {    
@@ -60,15 +61,15 @@ static void monitor_uart_task(void *arg)
     ESP_ERROR_CHECK(uart_param_config(UART_USED, &uart_config));
 
     // Set UART pins(TX: IO17 (UART1 default), RX: IO18 (UART1 default), RTS: IO19, CTS: IO20)
-    ESP_ERROR_CHECK(uart_set_pin(UART_USED, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+    ESP_ERROR_CHECK(uart_set_pin(UART_USED, 17, 16, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
 
-    ESP_ERROR_CHECK(uart_driver_install(UART_USED, UART_BUF_SIZE, UART_BUF_SIZE, 0, NULL, 0));
+    ESP_ERROR_CHECK(uart_driver_install(UART_USED, UART_BUF_SIZE, UART_BUF_SIZE, EVENT_QUEUE_SIZE, &uart1_queue, 0));
 
     // Allocate buffers for UART
     uint8_t data[UART_BUF_SIZE] = {0};
 
     // using WIFI MAC address to create unique ID for each chip
-    char baseMac[MSG_LEN] = {0};
+    uint8_t baseMac[MSG_LEN] = {0};
     esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
 
     // setup GPIO to control NMOS
@@ -87,25 +88,44 @@ static void monitor_uart_task(void *arg)
     gpio_config(&io_conf);
     ESP_ERROR_CHECK(gpio_set_level(GPIO_LOCK_EN, 0));
     
+    uart_event_t event;
     while(1) {
         // check every 1s
         vTaskDelay(1000 / portTICK_RATE_MS);
+        printf("The mac address is: %u, %u, %u, %u, %u, %u\n", baseMac[0], baseMac[1], baseMac[2], baseMac[3], baseMac[4], baseMac[5]);
         //Read data from UART
         size_t buffered_len = 0;
-        uart_get_buffered_data_len(UART_USED, buffered_len);
+        uart_get_buffered_data_len(UART_USED, &buffered_len);
+        printf("buffered_len: %u\n", buffered_len);
         // ignore corrupt msg and empty buffer
         if (buffered_len == 0) {continue;} 
         if (buffered_len != MSG_LEN) {
             uart_flush(UART_USED);
+            xQueueReset(uart1_queue);
             continue;
         }
-        int len = uart_read_bytes(UART_USED, &data, UART_BUF_SIZE, PACKET_READ_TICS);
+        uint8_t err = 0;
+        while (uxQueueMessagesWaiting(uart1_queue) > 0) {
+            xQueueReceive(uart1_queue, (void * )&event, 0);
+            if (event.type == UART_PARITY_ERR || event.type == UART_FRAME_ERR) {
+                err = 1;
+                printf("event error\n");
+                break;
+            }
+        }
+        if (err) {
+            uart_flush(UART_USED);
+            xQueueReset(uart1_queue);
+            continue;
+        }
+        int len = uart_read_bytes(UART_USED, data, UART_BUF_SIZE, PACKET_READ_TICS);
         int addressed_flag = 1;
         for (int i = 0; i < MSG_LEN; i++) {
             if (baseMac[i] != data[i]) {addressed_flag = 0;}
         }
         if (addressed_flag){
             // open the lock for 1.5s
+            printf("received msg to this device\n");
             ESP_ERROR_CHECK(gpio_set_level(GPIO_LOCK_EN, 1));
             vTaskDelay(LOCK_OPEN_TICKS);
             ESP_ERROR_CHECK(gpio_set_level(GPIO_LOCK_EN, 0));

@@ -34,8 +34,8 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("/home/jake/esp/locker/build/esp-idf/soc/src/esp32/cmake_install.cmake")
-  include("/home/jake/esp/locker/build/esp-idf/soc/soc/cmake_install.cmake")
+  include("/home/jake/Documents/Coding/Modularized-Locker/ESP32/locker/build/esp-idf/soc/src/esp32/cmake_install.cmake")
+  include("/home/jake/Documents/Coding/Modularized-Locker/ESP32/locker/build/esp-idf/soc/soc/cmake_install.cmake")
 
 endif()
 
