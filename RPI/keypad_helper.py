@@ -1,6 +1,6 @@
 from pad4pi import rpi_gpio
 
-class KeyPad():
+class KeyPadHelper():
     def log_key(self, key):
         self.output=self.output+str(key)
         print(str(key))

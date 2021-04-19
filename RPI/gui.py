@@ -1,5 +1,5 @@
 import tkinter as tk
-from keypad import KeyPad as keypad
+from keypad_helper import KeyPadHelper as keypadhelper
 from locker_communication import open_locker
 from mysql_link import assign_locker
 from mysql_link import unassign_locker
@@ -17,10 +17,10 @@ pin3=3
 setup_mode=False
 
 
+page1entry=None
 
 
-
-pad=keypad()
+pad=keypadhelper()
 address=0000
 
 
@@ -84,25 +84,26 @@ class StartPage(tk.Frame):
 
 class PageOne(tk.Frame):
     def cb(self, object):
-        self.entry.delete(0,'end')
-        self.entry.insert(0,pad.output)
+        return
+        #page1entry.delete(0,'end')
+        #page1entry.insert(0,pad.output)
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         label = tk.Label(self, text="Enter Pickup Code", font=LARGE_FONT)
         label.pack(pady=10,padx=10)
-        self.entry=tk.Entry(self)
-        self.entry.pack(pady=10, padx=10)
-        GPIO.setmode(GPIO.BCM)
+        page1entry=tk.Entry(self)
+        page1entry.pack(pady=10, padx=10)
+        #GPIO.setmode(GPIO.BCM)
 
-        GPIO.setup(13, GPIO.IN)
+        #GPIO.setup(13, GPIO.IN)
         #GPIO.setup(20, GPIO.IN)
         #GPIO.setup(21, GPIO.IN)
         #GPIO.add_event_detect(16, GPIO.RISING, callback=self.cb)  
         #GPIO.add_event_detect(20, GPIO.RISING, callback=self.cb) 
-        GPIO.add_event_detect(13, GPIO.RISING, callback=self.cb) 
-        button4=tk.Button(self, text="Enter Code", command=lambda: unassign_locker(self.entry.get(), lockers))
+        #GPIO.add_event_detect(13, GPIO.RISING, callback=self.cb) 
+        button4=tk.Button(self, text="Enter Code", command=lambda: unassign_locker(page1entry.get(), lockers))
         button4.pack()
-        button2 = tk.Button(self, text="Retype Code", command=self.entry.delete(0, "end"))
+        button2 = tk.Button(self, text="Retype Code", command=page1entry.delete(0, "end"))
         button2.pack()
         button1 = tk.Button(self, text="Back to Home",
                             command=lambda: controller.show_frame(StartPage))
