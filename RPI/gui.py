@@ -16,10 +16,6 @@ pin3=3
 
 setup_mode=False
 
-
-page1entry=None
-
-
 pad=keypadhelper()
 address=0000
 
@@ -46,7 +42,9 @@ class SeaofBTCapp(tk.Tk):
 
         container.grid_rowconfigure(0, weight=1)
         container.grid_columnconfigure(0, weight=1)
-
+        entry=tk.StringVar(self)
+        entry.set(pad.output)
+        print(entry)
         self.frames = {}
 
         for F in (StartPage, PageOne, PageTwo):
@@ -83,27 +81,22 @@ class StartPage(tk.Frame):
 
 
 class PageOne(tk.Frame):
-    def cb(self, object):
-        return
-        #page1entry.delete(0,'end')
-        #page1entry.insert(0,pad.output)
+    def cb(self):
+        self.page1entry.insert(0,pad.output)
+    def delete(self):
+        self.page1entry.delete(0,'end')
+        pad.reset_output()
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         label = tk.Label(self, text="Enter Pickup Code", font=LARGE_FONT)
         label.pack(pady=10,padx=10)
-        page1entry=tk.Entry(self)
-        page1entry.pack(pady=10, padx=10)
-        #GPIO.setmode(GPIO.BCM)
-
-        #GPIO.setup(13, GPIO.IN)
-        #GPIO.setup(20, GPIO.IN)
-        #GPIO.setup(21, GPIO.IN)
-        #GPIO.add_event_detect(16, GPIO.RISING, callback=self.cb)  
-        #GPIO.add_event_detect(20, GPIO.RISING, callback=self.cb) 
-        #GPIO.add_event_detect(13, GPIO.RISING, callback=self.cb) 
+        self.page1entry=tk.Entry(self)
+        self.page1entry.pack(pady=10, padx=10)
         button4=tk.Button(self, text="Enter Code", command=lambda: unassign_locker(page1entry.get(), lockers))
         button4.pack()
-        button2 = tk.Button(self, text="Retype Code", command=page1entry.delete(0, "end"))
+        button3=tk.Button(self, text="Show Entered Code", command=self.cb)
+        button3.pack()
+        button2 = tk.Button(self, text="Retype Code", command=self.delete)
         button2.pack()
         button1 = tk.Button(self, text="Back to Home",
                             command=lambda: controller.show_frame(StartPage))
@@ -114,6 +107,9 @@ class PageOne(tk.Frame):
 class PageTwo(tk.Frame):
     def cb(self):
         self.entry.insert(0,pad.output)
+    def delete(self):
+        self.entry.delte(0,'end')
+        pad.reset_output()
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         label = tk.Label(self, text="Enter Dropoff Code", font=LARGE_FONT)

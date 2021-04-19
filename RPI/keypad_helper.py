@@ -4,6 +4,8 @@ class KeyPadHelper():
     def log_key(self, key):
         self.output=self.output+str(key)
         print(str(key))
+    def reset_output(self):
+        self.output=''
     def __init__(self):
         self.layout = [
             [1, 2, 3],
