@@ -22,14 +22,21 @@
 // Read packet timeout
 #define PACKET_READ_TICS        (100 / portTICK_RATE_MS)
 #define UART_TASK_STACK_SIZE    (4096)
+#define RESET_TASK_STACK_SIZE    (4096)
 #define UART_TASK_PRIO          (10)                        // max at 24
+#define RESET_TASK_PRIO          (10)                        // max at 24
 #define EVENT_QUEUE_SIZE        (20)
+#define RESET_MODE_PIN               (22)
 
 static QueueHandle_t uart1_queue;
 
-static void uart_send(const int port, const char* str, uint8_t length) 
+static uint8_t baseMac[MSG_LEN] = {0};
+
+static QueueHandle_t gpio_evt_queue = NULL;
+
+static void uart_send(const int port, const uint8_t* str, uint8_t length) 
 {    
-    if (uart_write_bytes(port, str, length) != length) {
+    if (uart_write_bytes(port, (const char *)str, length) != length) {
         // ESP_LOGE(TAG, "Send data critical failure.");
         // add your code to handle sending failure here
         printf("uart_send failed");
@@ -37,13 +44,12 @@ static void uart_send(const int port, const char* str, uint8_t length)
     }
 }
 
-// /*
-//  * Define UART interrupt subroutine to handle parity error
-//  */
-// static void uart_intr_parity_err_handle(void *arg){
-//     uart_flush(UART_USED);
-//     uart_clear_intr_status(UART_USED, UART_PARITY_ERR_INT_CLR);
-// }
+static void IRAM_ATTR reset_isr_handler(void* arg)
+{
+    uint8_t ack = 1;
+    xQueueSendFromISR(gpio_evt_queue, &ack, NULL);
+}
+
 
 static void monitor_uart_task(void *arg)
 {
@@ -52,7 +58,7 @@ static void monitor_uart_task(void *arg)
         .data_bits = UART_DATA_8_BITS,
         .parity = UART_PARITY_EVEN,
         .stop_bits = UART_STOP_BITS_1,
-        .flow_ctrl = UART_MODE_UART,        // no need for RS485 mode since it just uses RX
+        .flow_ctrl = UART_MODE_RS485_HALF_DUPLEX,        // no need for RS485 mode since it just uses RX
         .rx_flow_ctrl_thresh = 122,
         // .source_clk = UART_SCLK_APB,
     };
@@ -68,9 +74,7 @@ static void monitor_uart_task(void *arg)
     // Allocate buffers for UART
     uint8_t data[UART_BUF_SIZE] = {0};
 
-    // using WIFI MAC address to create unique ID for each chip
-    uint8_t baseMac[MSG_LEN] = {0};
-    esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
+    
 
     // setup GPIO to control NMOS
     gpio_config_t io_conf;
@@ -85,7 +89,7 @@ static void monitor_uart_task(void *arg)
     //disable pull-up mode
     io_conf.pull_up_en = 0;
     //configure GPIO with the given settings
-    gpio_config(&io_conf);
+    ESP_ERROR_CHECK(gpio_config(&io_conf));
     ESP_ERROR_CHECK(gpio_set_level(GPIO_LOCK_EN, 0));
     
     uart_event_t event;
@@ -134,8 +138,38 @@ static void monitor_uart_task(void *arg)
     vTaskDelete(NULL);
 }
 
+void setup_reset_button() {
+    gpio_config_t io_conf;
+    io_conf.intr_type = GPIO_INTR_NEGEDGE;
+    io_conf.pin_bit_mask = 1ULL << RESET_MODE_PIN;
+    //set as input mode
+    io_conf.mode = GPIO_MODE_INPUT;
+    //enable pull-up mode
+    io_conf.pull_up_en = 1;
+    ESP_ERROR_CHECK(gpio_config(&io_conf));
+    ESP_ERROR_CHECK(gpio_install_isr_service(0));
+    ESP_ERROR_CHECK(gpio_isr_handler_add(RESET_MODE_PIN, reset_isr_handler, NULL));
+    ESP_ERROR_CHECK(gpio_set_level(RESET_MODE_PIN, 1));
+    gpio_evt_queue = xQueueCreate(1, sizeof(uint8_t));
+}
+
+void reset_button_monitor_task() {
+    uint8_t ack;
+    while (true) {
+        vTaskDelay(1000 / portTICK_RATE_MS);
+        if (xQueueReceive(gpio_evt_queue, &ack, 0) == pdTRUE){
+            uart_send(UART_USED, baseMac, MSG_LEN);
+        }
+    }
+    vTaskDelete(NULL);
+}
+
 void app_main(void)
 {
+    // using WIFI MAC address to create unique ID for each chip
+    esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
     TaskHandle_t uart_task_handle;
+    setup_reset_button();
     xTaskCreate(monitor_uart_task, "monitor_uart_task", UART_TASK_STACK_SIZE, NULL, UART_TASK_PRIO, &uart_task_handle);
+    xTaskCreate(reset_button_monitor_task, "reset_button_monitor_task", RESET_TASK_STACK_SIZE, NULL, RESET_TASK_PRIO, NULL);
 }
