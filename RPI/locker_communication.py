@@ -43,14 +43,14 @@ def setup():
     global setup_mode
     addresses=set()
     while(setup_mode==True):
-        print(setup_mode)
+        #print(setup_mode)
         received_data=ser.read()
         sleep(0.03)
         data_left=ser.inWaiting()
         received_data += ser.read(data_left)
         if(len(received_data)>3):
             addresses.add(received_data)
-        print(received_data)
+            print(received_data)
     lockers=[]
     for address in addresses:
         lockers.append(locker(address, False))
