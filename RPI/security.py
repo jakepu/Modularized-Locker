@@ -33,5 +33,3 @@ def main():
         time.sleep(5)
         pir.wait_for_motion(timeout=None)
         capture_upload(camera)
-
-main()

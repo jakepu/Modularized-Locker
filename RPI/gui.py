@@ -7,6 +7,7 @@ import RPi.GPIO as GPIO
 from locker_communication import setup
 import threading
 from locker_communication import stop_setup
+from security import main
 
 LARGE_FONT= ("Verdana", 12)
 #GPIO.setmode(GPIO.BOARD)
@@ -20,6 +21,7 @@ pad=keypadhelper()
 address=0000
 
 
+
 #lockers.append(locker(b'\x9c\x9c\x1f\xc7\xbf\x78', False))
 
 def start_setup(object):
@@ -27,9 +29,15 @@ def start_setup(object):
     setup_mode=True
     setup()
 
+def start_camera(object):
+    run_camera=True
+    if(run_camera):
+        main()
 
 
+y=threading.Thread(target=main, args=(1,), daemon=True)
 x = threading.Thread(target=start_setup, args=(1,), daemon=True)
+y.start()
 
 def admin_check(code):
     pad.reset_output()
