@@ -20,51 +20,71 @@ pin3=3
 pad=keypadhelper()
 address=0000
 
-
+check_keypad=False
 
 #lockers.append(locker(b'\x9c\x9c\x1f\xc7\xbf\x78', False))
 
-def start_setup(object):
+def start_setup(popup):
     global setup_mode
     setup_mode=True
-    setup()
+    lockers=setup()
+    popup.set(str(len(lockers))+" lockers set up")
 
-def start_camera(object):
+def start_camera():
     run_camera=True
     if(run_camera):
         main()
 
+def start_keypad(var):
+    global check_keypad
+    while(check_keypad):
+        if(var.get()!=pad.output):
+            try:
+                var.insert('end',pad.output[len(pad.output)-1])
+            except:
+                print('')
 
-y=threading.Thread(target=main, args=(1,), daemon=True)
-x = threading.Thread(target=start_setup, args=(1,), daemon=True)
+y=threading.Thread(target=main, daemon=True)
 y.start()
 
-def admin_check(code):
+
+def admin_check(code, popup):
     pad.reset_output()
     admin_code=1111
+    x = threading.Thread(target=start_setup, args=(popup,), daemon=True)
     if(str(admin_code)==code.get()):
         x.start()
+        popup.set("Code is correct. Setup Mode Initiated")
+    else:
+        popup.set("Code is incorrect. Try again.")
     code.delete(0,'end')
     
 
-def unassign_locker_helper(pickup_code):
+def unassign_locker_helper(pickup_code, popup):
     pad.reset_output()
-    unassign_locker(pickup_code.get())
+    status=unassign_locker(pickup_code.get())
     pickup_code.delete(0,'end')
+    if(status==True):
+        popup.set("Code is Correct. Locker has opened!")
+    else:
+        popup.set("Code is incorrect. Try again")
 
-def assign_locker_helper(deposit_code):
+def assign_locker_helper(deposit_code, popup):
     pad.reset_output()
     assign_locker(deposit_code.get())
     deposit_code.delete(0,'end')
+    if(status==True):
+        popup.set("Code is Correct. Locker has opened!")
+    else:
+        popup.set("Code is incorrect. Try again")
 
 
 class SeaofBTCapp(tk.Tk):
-
     def __init__(self, *args, **kwargs):
         
         tk.Tk.__init__(self, *args, **kwargs)
-        #self.attributes('-fullscreen',True)
-        container = tk.Frame(self)
+        self.attributes('-fullscreen',False)
+        container = tk.Frame(self, bg='#49657b')
 
         container.pack(side="top", fill="both", expand = True)
 
@@ -92,90 +112,110 @@ class SeaofBTCapp(tk.Tk):
 class StartPage(tk.Frame):
 
     def __init__(self, parent, controller):
+        global check_keypad
+        check_keypad=False
         tk.Frame.__init__(self,parent)
-        label = tk.Label(self, text="Picking Up or Dropping Off?", font=LARGE_FONT)
+        self.configure(bg='#49657b')
+        label = tk.Label(self, text="Picking Up or Dropping Off?", font='Lato 18 bold', bg='#49657b')
         label.pack(pady=10,padx=10)
 
-        button = tk.Button(self, text="Pick Up",
+        button = tk.Button(self, text="Pick Up", height=2, width=10, bg='#708090',
                             command=lambda: controller.show_frame(PageOne))
-        button.pack()
+        button.pack(pady=10, padx=10)
 
-        button2 = tk.Button(self, text="Drop Off",
+        button2 = tk.Button(self, text="Drop Off", height=2, width=10, bg='#708090',
                             command=lambda: controller.show_frame(PageTwo))
-        button2.pack()
-        button3=tk.Button(self,text="Admin Page", command=lambda: controller.show_frame(AdminPage))
-        button3.pack()
+        button2.pack(pady=10, padx=10)
+        button3=tk.Button(self,text="Admin Page", height=2, width=10, bg='#708090', command=lambda: controller.show_frame(AdminPage))
+        button3.pack(pady=10, padx=10)
 
 class PageOne(tk.Frame):
-    def cb(self):
-        self.page1entry.insert(0,pad.output)
     def delete_entry(self):
         self.page1entry.delete(0,'end')
         pad.reset_output()
     def __init__(self, parent, controller):
+        #controller.configure(bg='#49657b')
+        global check_keypad
+        check_keypad=True
         tk.Frame.__init__(self, parent)
-        label = tk.Label(self, text="Enter Pickup Code", font=LARGE_FONT)
+        label = tk.Label(self, text="Enter Pickup Code", font=LARGE_FONT, bg='#49657b')
         label.pack(pady=10,padx=10)
         self.page1entry=tk.Entry(self)
         self.page1entry.pack(pady=10, padx=10)
+        z=threading.Thread(target=start_keypad, args=(self.page1entry,),daemon=True)
+        z.start()
+        popup=tk.StringVar()
+        popup.set("")
+        message=tk.Label(self, textvariable=popup)
         print("Code to Function " +self.page1entry.get())
-        button4=tk.Button(self, text="Enter Code", command=lambda: unassign_locker_helper(self.page1entry))
+        button4=tk.Button(self, text="Enter Code", height=2, width=10, bg='#708090', command=lambda: unassign_locker_helper(self.page1entry, popup))
         button4.pack()
-        button3=tk.Button(self, text="Show Entered Code", command=self.cb)
-        button3.pack()
-        button2 = tk.Button(self, text="Retype Code", command=self.delete_entry())
+        button2 = tk.Button(self, text="Retype Code", height=2, width=10,  bg='#708090', command=self.delete_entry)
         button2.pack()
-        button1 = tk.Button(self, text="Back to Home",
+        button1 = tk.Button(self, text="Back to Home", height=2, width=10,  bg='#708090',
                             command=lambda: controller.show_frame(StartPage))
         button1.pack()
+        message.pack()
+
 
 
 
 class PageTwo(tk.Frame):
-    def cb(self):
-        self.entry.insert(0,pad.output)
     def delete_entry(self):
         self.entry.delete(0,'end')
         pad.reset_output()
     def __init__(self, parent, controller):
+        global check_keypad
+        check_keypad=True
+        #self.configure(bg='#49657b')
         tk.Frame.__init__(self, parent)
-        label = tk.Label(self, text="Enter Dropoff Code", font=LARGE_FONT)
+        label = tk.Label(self, text="Enter Dropoff Code", font=LARGE_FONT, bg='#49657b')
         label.pack(pady=10,padx=10)
         self.entry=tk.Entry(self)
         self.entry.pack(pady=10, padx=10)
-        button3=tk.Button(self, text="Show Entered Code", command=self.cb)
-        button3.pack()
-        button4=tk.Button(self, text="Enter Code", command=lambda: assign_locker_helper(self.entry))
+        z=threading.Thread(target=start_keypad, args=(self.entry,),daemon=True)
+        z.start()
+        popup=tk.StringVar()
+        popup.set("")
+        message=tk.Label(self, textvariable=popup)
+        button4=tk.Button(self, text="Enter Code", height=2, width=10,  bg='#708090', command=lambda: assign_locker_helper(self.entry, message))
         button4.pack()
-        button2 = tk.Button(self, text="Retype Code", command=self.delete_entry())
+        button2 = tk.Button(self, text="Retype Code", height=2, width=10,  bg='#708090', command=self.delete_entry)
         button2.pack()
-        button1 = tk.Button(self, text="Back to Home",
+        button1 = tk.Button(self, text="Back to Home", height=2, width=10,  bg='#708090',
                             command=lambda: controller.show_frame(StartPage))
         button1.pack()
+        message.pack()
 
 class AdminPage(tk.Frame):
-    def cb(self):
-        self.entry.insert(0,pad.output)
     def delete_entry(self):
         self.entry.delete(0,'end')
         pad.reset_output()
     def __init__(self, parent, controller):
+        global check_keypad
+        check_keypad=True
+        #self.configure(bg='#49657b')
         tk.Frame.__init__(self, parent)
-        label = tk.Label(self, text="Enter Admin Password", font=LARGE_FONT)
+        label = tk.Label(self, text="Enter Admin Password", font=LARGE_FONT, bg='#49657b')
         label.pack(pady=10,padx=10)
         self.entry=tk.Entry(self)
         self.entry.pack(pady=10, padx=10)
-        button3=tk.Button(self, text="Show Entered Code", command=self.cb)
-        button3.pack()
-        button4=tk.Button(self, text="Enter Code", command=lambda: admin_check(self.entry))
+        z=threading.Thread(target=start_keypad, args=(self.entry,),daemon=True)
+        z.start()
+        popup=tk.StringVar()
+        popup.set("")
+        message=tk.Label(self, textvariable=popup)
+        button4=tk.Button(self, text="Enter Code", command=lambda: admin_check(self.entry, message), height=2, width=10)
         button4.pack()
-        button2 = tk.Button(self, text="Retype Code", command=self.delete_entry())
+        button5=tk.Button(self,text="End Setup Mode", height=2, width=10,  bg='#708090', command=stop_setup)
+        button5.pack()
+        button2 = tk.Button(self, text="Retype Code", height=2, width=10,  bg='#708090', command=self.delete_entry)
         button2.pack()
-        button1 = tk.Button(self, text="Back to Home",
+        button1 = tk.Button(self, text="Back to Home", height=2, width=10,  bg='#708090',
                             command=lambda: controller.show_frame(StartPage))
         button1.pack()
-        button5=tk.Button(self,text="End Setup Mode", command=stop_setup)
-        button5.pack()
+        message.pack()
+        
 
         
         

@@ -8,25 +8,18 @@ Created on Sat Apr 17 17:27:48 2021
 import serial
 from time import sleep
 import mysql.connector
+import smtplib
+from email.message import EmailMessage
 
-mydb= mysql.connector.connect(
-        host="98.212.157.222",
-        user= "ece445",
-        password= "ECE 445 Team 61",
-        database= "locker",
-        auth_plugin='mysql_native_password'
-        )
 
-mycursor=mydb.cursor()
 lockers=[]
-
 
 setup_mode=True
 
 class locker:
     address=b'\x00\x00\x1b\x00\xbf'
     occupied=True
-    username=''
+    email=''
     def __init__(self, address, occupied):
         self.address=address
         self.occupied=occupied
@@ -60,32 +53,88 @@ def setup():
         print("Locker address: ", lockers[i].address)
     return lockers
 
+def dropoff_email(email):
+    try:
+        msg = EmailMessage()
+        msg.set_content('A package has arrived for you.')
+
+        msg['Subject'] = 'New Package'
+        msg['From'] = "ece445lockertest@gmail.com"
+        msg['To'] = email
+
+        # Send the message via our own SMTP server.
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server.login("ece445lockertest@gmail.com", "Illini@01")
+        server.send_message(msg)
+        server.quit()
+    except:
+        print("Not a valid email")
+
+def pickup_email(email):
+    try:
+        msg = EmailMessage()
+        msg.set_content('A package at your locker has just been picked up.')
+
+        msg['Subject'] = 'New Package'
+        msg['From'] = "ece445lockertest@gmail.com"
+        msg['To'] = email
+
+        # Send the message via our own SMTP server.
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server.login("ece445lockertest@gmail.com", "Illini@01")
+        server.send_message(msg)
+        server.quit()
+    except:
+        print("Not a valid email")
+
+    
+    
 def find_user_deposit(deposit_code):
+    mydb= mysql.connector.connect(
+        host="98.212.157.222",
+        user= "ece445",
+        password= "ECE 445 Team 61",
+        database= "locker",
+        auth_plugin='mysql_native_password'
+        )
+    mycursor=mydb.cursor()
     value=(deposit_code,)
-    mycursor.execute("SELECT username FROM locker WHERE deposit_code= %s", value)
+    mycursor.execute("SELECT email FROM locker WHERE deposit_code= %s", value)
     result=mycursor.fetchall()
     print(result)
     found=False
-    username=''
+    mydb.close()
+    email=''
     if(len(result)!=0):
         found=True
-        username=result[0][0]
-    return(found, username)
+        email=result[0][0]
+    if(len(deposit_code)<4):
+        found=False
+    return(found, email)
 
 def find_user_pickup(pickup_code):
+    mydb= mysql.connector.connect(
+        host="98.212.157.222",
+        user= "ece445",
+        password= "ECE 445 Team 61",
+        database= "locker",
+        auth_plugin='mysql_native_password'
+        )
+    mycursor=mydb.cursor()
     value=(pickup_code,)
-    mycursor.execute("SELECT username FROM locker WHERE pickup_code= %s", value)
+    mycursor.execute("SELECT email FROM locker WHERE pickup_code= %s", value)
     result=mycursor.fetchall()
     found=False
-    username=''
+    mydb.close()
+    email=''
     if(len(result)!=0):
         found=True
-        username=result[0][0]
-    return(found, username)
+        email=result[0][0]
+    return(found, email)
     
 
 def assign_locker(deposit_code):
-    status,username=find_user_deposit(deposit_code)
+    status,email=find_user_deposit(deposit_code)
     print("status "+str(status))
     print("Length of Lockers: "+str(len(lockers)))
     if(status==True):
@@ -94,22 +143,26 @@ def assign_locker(deposit_code):
             if(lockers[i].occupied==False):
                 print("If statement runs")
                 lockers[i].occupied=True
-                lockers[i].username=username
+                lockers[i].email=email
                 open_locker(lockers[i].address)
+                dropoff_email(email)
                 break
+        
+    return status
         
             
 def unassign_locker(pickup_code):
-    status,username=find_user_pickup(pickup_code)
+    status,email=find_user_pickup(pickup_code)
     if(status==True):
         for i in range(len(lockers)):
-            if(lockers[i].username==username):
+            if(lockers[i].email==email):
                 lockers[i].occupied=False
-                lockers[i].username=''
+                lockers[i].email=''
                 open_locker(lockers[i].address)
-                print("Username" + lockers[i].username)
+                print("email" + lockers[i].email)
+                pickup_email(email)
                 break
-
+    return status
 
 def stop_setup():
     global setup_mode
@@ -141,6 +194,7 @@ def read():
         received_data += ser.read(data_left)
         print (received_data)         
 
+dropoff_email('email')
 #open_locker(b'432432423')
 #read()
 
