@@ -200,9 +200,9 @@ def read():
         sleep(0.03)
         data_left = ser.inWaiting()             #check for remaining byte
         received_data += ser.read(data_left)
-        print (received_data)         
+        #print (received_data)         
 
-dropoff_email('email')
+#dropoff_email('email')
 #open_locker(b'432432423')
 #read()
 

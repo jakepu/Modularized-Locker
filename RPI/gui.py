@@ -31,7 +31,7 @@ def start_setup(popup):
     popup.set(str(len(lockers))+" lockers set up")
 
 def start_camera():
-    run_camera=True
+    run_camera=False
     if(run_camera):
         main()
 
@@ -42,7 +42,7 @@ def start_keypad(var):
             try:
                 var.insert('end',pad.output[len(pad.output)-1])
             except:
-                print('')
+                placeholder=1
 
 y=threading.Thread(target=main, daemon=True)
 y.start()
@@ -84,7 +84,7 @@ class SeaofBTCapp(tk.Tk):
         
         tk.Tk.__init__(self, *args, **kwargs)
         self.attributes('-fullscreen',False)
-        container = tk.Frame(self, bg='#49657b')
+        container = tk.Frame(self, bg='blue')
 
         container.pack(side="top", fill="both", expand = True)
 
@@ -105,6 +105,7 @@ class SeaofBTCapp(tk.Tk):
     def show_frame(self, cont):
 
         frame = self.frames[cont]
+        frame.configure(bg='#49657b')
         frame.tkraise()
     
 
@@ -134,7 +135,7 @@ class PageOne(tk.Frame):
         self.page1entry.delete(0,'end')
         pad.reset_output()
     def __init__(self, parent, controller):
-        #controller.configure(bg='#49657b')
+        #self.configure(bg='#49657b')
         global check_keypad
         check_keypad=True
         tk.Frame.__init__(self, parent)
@@ -205,7 +206,7 @@ class AdminPage(tk.Frame):
         popup=tk.StringVar()
         popup.set("")
         message=tk.Label(self, textvariable=popup)
-        button4=tk.Button(self, text="Enter Code", command=lambda: admin_check(self.entry, message), height=2, width=10)
+        button4=tk.Button(self, text="Enter Code", command=lambda: admin_check(self.entry, popup), height=2, width=10, bg='#708090')
         button4.pack()
         button5=tk.Button(self,text="End Setup Mode", height=2, width=10,  bg='#708090', command=stop_setup)
         button5.pack()
