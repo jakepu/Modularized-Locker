@@ -24,15 +24,25 @@
 #define UART_TASK_STACK_SIZE    (2048)
 #define UART_TASK_PRIO          (10)                        // max at 24
 #define EVENT_QUEUE_SIZE        (20)
+// since UART_MODE_RS485_HALF_DUPLEX is not controlling RTS well I will
+// use a independent GPIO to work as RTS
+#define RTS_PIN               (21) 
 
 static void uart_send(const int port, const uint8_t* str, uint8_t length) 
-{    
+{   
+    // since UART_MODE_RS485_HALF_DUPLEX is not controlling RTS, we are controlling RTS_PIN
+    printf("RTS TO 1\n");
+    ESP_ERROR_CHECK(gpio_set_level(RTS_PIN,1));
     if (uart_write_bytes(port, (const char *)str, length) != length) {
         // ESP_LOGE(TAG, "Send data critical failure.");
         // add your code to handle sending failure here
         printf("uart_send failed");
         abort();
     }
+    // wait till all data is sent
+    vTaskDelay(10 / portTICK_RATE_MS);
+    ESP_ERROR_CHECK(gpio_set_level(RTS_PIN,0));
+    printf("RTS TO 0\n");
 }
 
 // /*
@@ -58,8 +68,8 @@ static void monitor_uart_task(void *arg)
     // Configure UART parameters
     ESP_ERROR_CHECK(uart_param_config(UART_USED, &uart_config));
 
-    // Set UART pins(TX: IO17 (UART1 default), RX: IO18 (UART1 default), RTS: IO19, CTS: IO20)
-    ESP_ERROR_CHECK(uart_set_pin(UART_USED, 17, 16, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+    // Set UART pins(TX: IO17 (UART1 default), RX: IO18 (UART1 default), RTS: IO33, CTS: IO34)
+    ESP_ERROR_CHECK(uart_set_pin(UART_USED, 17, 18, 33, 34));
 
     ESP_ERROR_CHECK(uart_driver_install(UART_USED, UART_BUF_SIZE, UART_BUF_SIZE, 0, NULL, 0));
 
@@ -81,8 +91,23 @@ static void monitor_uart_task(void *arg)
     vTaskDelete(NULL);
 }
 
+void setup_rts_pin() {
+    // since UART_MODE_RS485_HALF_DUPLEX is not controlling RTS well I will
+    // use a independent GPIO to work as RTS
+    gpio_config_t io_conf;
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    io_conf.pin_bit_mask = 1ULL << RTS_PIN;
+    //set as input mode
+    io_conf.mode = GPIO_MODE_OUTPUT;
+    io_conf.pull_up_en = 0;
+    io_conf.pull_down_en = 0;
+    ESP_ERROR_CHECK(gpio_config(&io_conf));
+    ESP_ERROR_CHECK(gpio_set_level(RTS_PIN,0));
+}
+
 void app_main(void)
 {
+    setup_rts_pin();
     TaskHandle_t uart_task_handle;
     xTaskCreate(monitor_uart_task, "monitor_uart_task", UART_TASK_STACK_SIZE, NULL, UART_TASK_PRIO, &uart_task_handle);
 }
