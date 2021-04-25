@@ -10,7 +10,13 @@ from time import sleep
 import mysql.connector
 import smtplib
 from email.message import EmailMessage
+import RPi.GPIO as GPIO
 
+# setup RE / WE pin on RPI
+RS485_EN_PIN = 4
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(RS485_EN_PIN, GPIO.OUT)
+GPIO.output(RS485_EN_PIN, GPIO.LOW)                 # default RE on, DE off
 
 lockers=[]
 
@@ -181,7 +187,9 @@ def open_locker(address):
     #ser.open()
     print("Line before write")
     print(address)
+    GPIO.output(RS485_EN_PIN, GPIO.HIGH)            # Turn on DE, turn off RE
     ser.write(address)
+    GPIO.output(RS485_EN_PIN, GPIO.LOW)             # Turn on RE, turn off DE
     print("Line after write")
     ser.close()
 
