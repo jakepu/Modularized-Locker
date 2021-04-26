@@ -49,7 +49,7 @@ static void uart_send(const int port, const uint8_t* str, uint8_t length)
         // abort();
     }
     // wait till all data is sent
-    vTaskDelay(10 / portTICK_RATE_MS);
+    uart_wait_tx_done(UART_USED, 1000 / portTICK_RATE_MS);
     ESP_ERROR_CHECK(gpio_set_level(RTS_PIN, 0));
 }
 
