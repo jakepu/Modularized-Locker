@@ -11,6 +11,8 @@ import mysql.connector
 import smtplib
 from email.message import EmailMessage
 import RPi.GPIO as GPIO
+import time
+import pickle
 
 # setup RE / WE pin on RPI
 RS485_EN_PIN = 4
@@ -19,16 +21,17 @@ GPIO.setup(RS485_EN_PIN, GPIO.OUT)
 GPIO.output(RS485_EN_PIN, GPIO.LOW)                 # default RE on, DE off
 
 lockers=[]
-
 setup_mode=True
 
 class locker:
     address=b'\x00\x00\x1b\x00\xbf'
     occupied=True
     email=''
-    def __init__(self, address, occupied):
+    number=0
+    def __init__(self, address, occupied, number):
         self.address=address
         self.occupied=occupied
+        self.number=number
 
 
 
@@ -40,6 +43,7 @@ def setup():
     ser = serial.Serial(port, baudrate, serial.EIGHTBITS, serial.PARITY_EVEN, serial.STOPBITS_ONE, timeout=1)
     #ser.open()
     global setup_mode
+    setup_mode=True
     addresses=set()
     while(setup_mode==True):
         #print(setup_mode)
@@ -52,7 +56,7 @@ def setup():
             print(received_data)
     lockers=[]
     for address in addresses:
-        lockers.append(locker(address, False))
+        lockers.append(locker(address, False, len(lockers)+1))
     print(len(lockers))
     ser.close()
     for i in range(len(lockers)):
@@ -143,6 +147,7 @@ def assign_locker(deposit_code):
     status,email=find_user_deposit(deposit_code)
     print("status "+str(status))
     print("Length of Lockers: "+str(len(lockers)))
+    number=0
     if(status==True):
         for i in range(len(lockers)):
             print("loop runs")
@@ -150,25 +155,28 @@ def assign_locker(deposit_code):
                 print("If statement runs")
                 lockers[i].occupied=True
                 lockers[i].email=email
+                number=lockers[i].number
                 open_locker(lockers[i].address)
                 dropoff_email(email)
                 break
         
-    return status
+    return status, number
         
             
 def unassign_locker(pickup_code):
     status,email=find_user_pickup(pickup_code)
+    number=0
     if(status==True):
         for i in range(len(lockers)):
             if(lockers[i].email==email):
                 lockers[i].occupied=False
                 lockers[i].email=''
+                number=lockers[i].number
                 open_locker(lockers[i].address)
                 print("email" + lockers[i].email)
                 pickup_email(email)
                 break
-    return status
+    return status, number
 
 def stop_setup():
     global setup_mode
@@ -189,6 +197,7 @@ def open_locker(address):
     print(address)
     GPIO.output(RS485_EN_PIN, GPIO.HIGH)            # Turn on DE, turn off RE
     ser.write(address)
+    time.sleep(0.5)
     GPIO.output(RS485_EN_PIN, GPIO.LOW)             # Turn on RE, turn off DE
     print("Line after write")
     ser.close()

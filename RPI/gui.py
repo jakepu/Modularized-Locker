@@ -29,6 +29,8 @@ def start_setup(popup):
     setup_mode=True
     lockers=setup()
     popup.set(str(len(lockers))+" lockers set up")
+    print(popup.get())
+    return
 
 def start_camera():
     run_camera=False
@@ -44,6 +46,7 @@ def start_keypad(var):
             except:
                 placeholder=1
 
+
 y=threading.Thread(target=main, daemon=True)
 y.start()
 
@@ -52,9 +55,12 @@ def admin_check(code, popup):
     pad.reset_output()
     admin_code=1111
     x = threading.Thread(target=start_setup, args=(popup,), daemon=True)
+    print("Admin Check Runs")
     if(str(admin_code)==code.get()):
         x.start()
         popup.set("Code is correct. Setup Mode Initiated")
+        print(popup.get())
+        print("After popup is set")
     else:
         popup.set("Code is incorrect. Try again.")
     code.delete(0,'end')
@@ -62,19 +68,19 @@ def admin_check(code, popup):
 
 def unassign_locker_helper(pickup_code, popup):
     pad.reset_output()
-    status=unassign_locker(pickup_code.get())
+    status, number=unassign_locker(pickup_code.get())
     pickup_code.delete(0,'end')
     if(status==True):
-        popup.set("Code is Correct. Locker has opened!")
+        popup.set("Code is Correct. Locker "+ str(number)+ " has opened!")
     else:
         popup.set("Code is incorrect. Try again")
 
 def assign_locker_helper(deposit_code, popup):
     pad.reset_output()
-    assign_locker(deposit_code.get())
+    status, number=assign_locker(deposit_code.get())
     deposit_code.delete(0,'end')
     if(status==True):
-        popup.set("Code is Correct. Locker has opened!")
+        popup.set("Code is Correct. Locker "+ str(number)+ " has opened!")
     else:
         popup.set("Code is incorrect. Try again")
 
@@ -179,7 +185,7 @@ class PageTwo(tk.Frame):
         popup=tk.StringVar()
         popup.set("")
         message=tk.Label(self, textvariable=popup)
-        button4=tk.Button(self, text="Enter Code", height=2, width=10,  bg='#708090', command=lambda: assign_locker_helper(self.entry, message))
+        button4=tk.Button(self, text="Enter Code", height=2, width=10,  bg='#708090', command=lambda: assign_locker_helper(self.entry, popup))
         button4.pack()
         button2 = tk.Button(self, text="Retype Code", height=2, width=10,  bg='#708090', command=self.delete_entry)
         button2.pack()
