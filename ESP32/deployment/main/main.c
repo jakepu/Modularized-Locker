@@ -28,8 +28,6 @@
 #define EVENT_QUEUE_SIZE        (20)
 // #define RESET_MODE_PIN               (22)                      // dev kit
 #define RESET_MODE_PIN               (42)                       // actual pin
-// since UART_MODE_RS485_HALF_DUPLEX is not controlling RTS well I will
-// use a independent GPIO to work as RTS
 #define RTS_PIN               (21) 
 
 static QueueHandle_t uart1_queue;
@@ -40,17 +38,12 @@ static QueueHandle_t gpio_evt_queue = NULL;
 
 static void uart_send(const int port, const uint8_t* str, uint8_t length) 
 {   
-    // since UART_MODE_RS485_HALF_DUPLEX is not controlling RTS, we are controlling RTS_PIN
-    ESP_ERROR_CHECK(gpio_set_level(RTS_PIN,1));
     if (uart_write_bytes(port, (const char *)str, length) != length) {
         // ESP_LOGE(TAG, "Send data critical failure.");
         // add your code to handle sending failure here
         printf("uart_send failed");
         // abort();
     }
-    // wait till all data is sent
-    uart_wait_tx_done(UART_USED, 1000 / portTICK_RATE_MS);
-    ESP_ERROR_CHECK(gpio_set_level(RTS_PIN, 0));
 }
 
 static void IRAM_ATTR reset_isr_handler(void* arg)
@@ -67,20 +60,17 @@ static void monitor_uart_task(void *arg)
         .data_bits = UART_DATA_8_BITS,
         .parity = UART_PARITY_EVEN,
         .stop_bits = UART_STOP_BITS_1,
-        .flow_ctrl = UART_MODE_UART,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
         .rx_flow_ctrl_thresh = 122,
         .source_clk = UART_SCLK_APB,
     };
 
     // Configure UART parameters
     ESP_ERROR_CHECK(uart_param_config(UART_USED, &uart_config));
-
-    // Set UART pins(TX: IO17 (UART1 default), RX: IO18 (UART1 default), RTS: IO21, CTS: IO33)
-    ESP_ERROR_CHECK(uart_set_pin(UART_USED, 17, 18, 33, 34));
-
-    
+    // Set UART pins(TX: IO17 (UART1 default), RX: IO18 (UART1 default), RTS: IO21, CTS: IO34)
+    ESP_ERROR_CHECK(uart_set_pin(UART_USED, 17, 18, RTS_PIN, 34));
     ESP_ERROR_CHECK(uart_driver_install(UART_USED, UART_BUF_SIZE, UART_BUF_SIZE, EVENT_QUEUE_SIZE, &uart1_queue, 0));
-
+    ESP_ERROR_CHECK(uart_set_mode(UART_USED, UART_MODE_RS485_HALF_DUPLEX));
     // Allocate buffers for UART
     uint8_t data[UART_BUF_SIZE] = {0};
 
@@ -163,19 +153,6 @@ void setup_reset_button() {
     gpio_evt_queue = xQueueCreate(1, sizeof(uint8_t));
 }
 
-void setup_rts_pin() {
-
-    gpio_config_t io_conf;
-    io_conf.intr_type = GPIO_INTR_DISABLE;
-    io_conf.pin_bit_mask = 1ULL << RTS_PIN;
-    //set as input mode
-    io_conf.mode = GPIO_MODE_OUTPUT;
-    io_conf.pull_up_en = 0;
-    io_conf.pull_down_en = 0;
-    ESP_ERROR_CHECK(gpio_config(&io_conf));
-    ESP_ERROR_CHECK(gpio_set_level(RTS_PIN,0));
-}
-
 void reset_button_monitor_task() {
     uint8_t ack;
     while (true) {
@@ -193,7 +170,6 @@ void app_main(void)
     esp_read_mac(baseMac, ESP_MAC_WIFI_STA);
     TaskHandle_t uart_task_handle;
     setup_reset_button();
-    setup_rts_pin();
     xTaskCreate(monitor_uart_task, "monitor_uart_task", UART_TASK_STACK_SIZE, NULL, UART_TASK_PRIO, &uart_task_handle);
     xTaskCreate(reset_button_monitor_task, "reset_button_monitor_task", RESET_TASK_STACK_SIZE, NULL, RESET_TASK_PRIO, NULL);
 }
