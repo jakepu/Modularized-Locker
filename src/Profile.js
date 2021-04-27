@@ -27,12 +27,14 @@ function Profile(props){
     }
 
     React.useEffect(() => {
-        Axios.post("http://localhost:3001/newCodes", {
+        setTimeout(()=>{
+            Axios.post("http://localhost:3001/newCodes", {
             email:email, 
             depositCode:Math.floor(depositCode),
             pickupCode:Math.floor(pickupCode),
             adminCode:Math.floor(adminCode),
         });
+           }, 1000)
     }, [pickupCode, depositCode, adminCode]);
 
     // React.useEffect(() => {
