@@ -10,6 +10,7 @@ from locker_communication import stop_setup
 from security import main
 from locker_communication import restore
 from locker_communication import open_all_lockers
+import mysql.connector
 
 LARGE_FONT= ("Verdana", 12)
 #GPIO.setmode(GPIO.BOARD)
@@ -32,7 +33,7 @@ def start_setup(popup):
     setup_mode=True
     lockers=setup()
     popup.set(str(len(lockers))+" lockers set up")
-    print(popup.get())
+    #print(popup.get())
     return
 
 def start_camera():
@@ -49,6 +50,10 @@ def start_keypad(var):
             except:
                 placeholder=1
 
+def home_helper(controller, popup):
+    popup.set('')
+    controller.show_frame(StartPage)
+
 
 y=threading.Thread(name='Security', target=main, daemon=True)
 y.start()
@@ -60,26 +65,41 @@ def setup_helper(popup):
 
 def admin_check(code, popup, controller):
     pad.reset_output()
-    admin_code=1111
     #x = threading.Thread(target=start_setup, args=(popup,), daemon=True)
-    print("Admin Check Runs")
-    if(str(admin_code)==code.get()):
-        #x.start()
-        popup.set("Code is correct")
-        print(popup.get())
-        print("After popup is set")
+    #print("Admin Check Runs")
+    mydb= mysql.connector.connect(
+        host="98.212.157.222",
+        user= "ece445",
+        password= "ECE 445 Team 61",
+        database= "locker",
+        auth_plugin='mysql_native_password'
+        )
+    mycursor=mydb.cursor()
+    value=(1,)
+    mycursor.execute("SELECT admin_password FROM locker WHERE admin= %s", value)
+    result=mycursor.fetchall()
+    isAdmin=False
+    for i in range(len(result)):
+        if(result[i][0]==int(code.get())):
+            isAdmin=True
+        #print(popup.get())
+        #print("After popup is set")
     else:
         popup.set("Code is incorrect. Try again.")
     code.delete(0,'end')
-    controller.show_frame(Admin_Control)
-    
+    mydb.close()
+    if(isAdmin==True):
+        controller.show_frame(Admin_Control)
+        popup.set("Code is correct")
 
 def unassign_locker_helper(pickup_code, popup):
     pad.reset_output()
-    status, number, locker_unassigned=unassign_locker(pickup_code.get())
+    status, numbers, locker_unassigned=unassign_locker(pickup_code.get())
     pickup_code.delete(0,'end')
-    if(status==True):
-        popup.set("Code is Correct. Locker "+ str(number)+ " has opened!")
+    if(status==True and len(numbers)==0):
+        popup.set("Code is Correct. Locker "+ str(numbers[0])+ " has opened!")
+    elif(status==True and len(numbers)==2):
+        popup.set("Code is Correct. Lockers "+ str(numbers[0])+ " and "+ str(numbers[1])+" have been opened.")
     elif(status==False):
         popup.set("Code is incorrect. Try again")
     elif(locker_unassigned==False):
@@ -166,13 +186,13 @@ class PageOne(tk.Frame):
         popup=tk.StringVar()
         popup.set("")
         message=tk.Label(self, textvariable=popup)
-        print("Code to Function " +self.page1entry.get())
+        #print("Code to Function " +self.page1entry.get())
         button4=tk.Button(self, text="Enter Code", height=2, width=10, bg='#708090', command=lambda: unassign_locker_helper(self.page1entry, popup))
         button4.pack()
         button2 = tk.Button(self, text="Retype Code", height=2, width=10,  bg='#708090', command=self.delete_entry)
         button2.pack()
         button1 = tk.Button(self, text="Back to Home", height=2, width=10,  bg='#708090',
-                            command=lambda: controller.show_frame(StartPage))
+                            command=lambda: home_helper(controller, popup))
         button1.pack()
         message.pack()
 
@@ -202,7 +222,7 @@ class PageTwo(tk.Frame):
         button2 = tk.Button(self, text="Retype Code", height=2, width=10,  bg='#708090', command=self.delete_entry)
         button2.pack()
         button1 = tk.Button(self, text="Back to Home", height=2, width=10,  bg='#708090',
-                            command=lambda: controller.show_frame(StartPage))
+                            command=lambda: home_helper(controller, popup))
         button1.pack()
         message.pack()
 
@@ -229,7 +249,7 @@ class AdminPage(tk.Frame):
         button2 = tk.Button(self, text="Retype Code", height=2, width=10,  bg='#708090', command=self.delete_entry)
         button2.pack()
         button1 = tk.Button(self, text="Back to Home", height=2, width=10,  bg='#708090',
-                            command=lambda: controller.show_frame(StartPage))
+                            command=lambda: home_helper(controller, popup))
         button1.pack()
         message.pack()
 
@@ -241,14 +261,14 @@ class Admin_Control(tk.Frame):
         popup=tk.StringVar()
         popup.set("")
         message=tk.Label(self, textvariable=popup)
-        button1= tk.Button(self,text="Start Setup Mode", height=2, width=10,  bg='#708090', command=lambda: setup_helper(popup))
+        button1= tk.Button(self,text="Start Setup Mode", height=2, width=12,  bg='#708090', command=lambda: setup_helper(popup))
         button1.pack(padx=10, pady=10)
-        button2=tk.Button(self,text="End Setup Mode", height=2, width=10,  bg='#708090', command=stop_setup)
+        button2=tk.Button(self,text="End Setup Mode", height=2, width=12,  bg='#708090', command=stop_setup)
         button2.pack(padx=10, pady=10)
-        button3=tk.Button(self, text="Open All Lockers", height=2, width=10,  bg='#708090', command=open_all_lockers)
+        button3=tk.Button(self, text="Open All Lockers", height=2, width=12,  bg='#708090', command=open_all_lockers)
         button3.pack(padx=10, pady=10)
-        button4 = tk.Button(self, text="Back to Home", height=2, width=10,  bg='#708090',
-                            command=lambda: controller.show_frame(StartPage))
+        button4 = tk.Button(self, text="Back to Home", height=2, width=12,  bg='#708090',
+                            command=lambda: home_helper(controller, popup))
         button4.pack(padx=10, pady=10)
         message.pack()
         

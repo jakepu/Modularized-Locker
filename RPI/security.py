@@ -12,11 +12,11 @@ def capture_upload(camera):
     date = datetime.now().strftime("%Y_%m_%d-%I:%M:%S_%p")
     img_filepath = saved_path + '/' + date + '.jpg'
     camera.capture(img_filepath)
-    with SSHClient() as ssh:
-        ssh.set_missing_host_key_policy(AutoAddPolicy())
-        ssh.connect(hostname = '98.212.157.222', username='locker', password='ECE 445 Team 61')
-        with SCPClient(ssh.get_transport()) as scp:
-            scp.put(img_filepath, remote_path='/home/locker')
+    # with SSHClient() as ssh:
+    #     ssh.set_missing_host_key_policy(AutoAddPolicy())
+    #     ssh.connect(hostname = '98.212.157.222', username='locker', password='ECE 445 Team 61')
+    #     with SCPClient(ssh.get_transport()) as scp:
+    #         scp.put(img_filepath, remote_path='/home/locker')
         
 
 
