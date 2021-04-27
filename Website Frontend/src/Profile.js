@@ -16,6 +16,7 @@ function Profile(props){
     const [depositCode, setDepositCode]=useState(0);
     const [adminAccess, setAdminAccess]=useState(0);
     const [adminCode, setAdminCode]=useState(0);
+    const [packages, setPackages]=useState(0);
 
     const reset = ()=>{
         setPickupCode(Math.floor(Math.random()*899999+100000));
@@ -26,7 +27,7 @@ function Profile(props){
         setAdminCode(Math.floor(Math.random()*899999+100000));
     }
 
-    React.useEffect(() => {
+     React.useEffect(() => {
         setTimeout(()=>{
             Axios.post("http://localhost:3001/newCodes", {
             email:email, 
@@ -37,6 +38,7 @@ function Profile(props){
            }, 1000)
     }, [pickupCode, depositCode, adminCode]);
 
+    
     // React.useEffect(() => {
     //     Axios.post("http://localhost:3001/newAdminCode", {
     //         email:email, 
@@ -60,6 +62,42 @@ function Profile(props){
         });
     }
         ,[]);
+
+    useEffect(() => {
+        Axios.post("http://localhost:3001/getInfo",
+        {email:email}).then((response)=>{
+            //console.log(dict);
+            setPassword(response.data[0].pwd);
+            setName(response.data[0].customer_name);
+            setPickupCode(response.data[0].pickup_code);
+            setDepositCode(response.data[0].deposit_code);
+            setAdminAccess(response.data[0].admin);
+            setAdminCode(response.data[0].admin_password);
+            //console.log(password);
+            //console.log(depositCode);
+            //console.log(depositCode);
+        });
+    }
+        ,[]);
+
+        useEffect(() => {
+            Axios.post("http://localhost:3001/getPackageStatus",
+            {email:email}).then((response)=>{
+                //console.log(dict);
+                console.log(response);
+                if(response.data.message){
+                    setPackages("You have packages ready for pickup.");
+                }
+                else{
+                    setPackages("You do not have any packages ready for pickup");
+                }
+                //console.log(password);
+                //console.log(depositCode);
+                //console.log(depositCode);
+            });
+        }
+            ,[]);
+
     if(adminAccess===0){
         return(
             <div className="ChangeCodes">
@@ -74,6 +112,8 @@ function Profile(props){
                     <div className="Button">
                     <button onClick={reset}>Get new pickup and deposit codes</button>
                     </div>
+                <h1>Package Status</h1>
+                <label>{packages}</label>
                 {/* <div className="Admin">
                     <div>
                     <h1>{adminAccess ? 'Current Admin Password' : ''}</h1>
@@ -97,6 +137,10 @@ function Profile(props){
                     </div>
                     <div className="Button">
                     <button onClick={reset}>Get new pickup and deposit codes</button>
+                    </div>
+                    <div className="Packages">
+                    <h1>Packages Ready for Pickup</h1>
+                    <label>{packages}</label>
                     </div>
                      <div className="Admin">
                     <h1>Admin Information</h1>

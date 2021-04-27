@@ -49,9 +49,9 @@ app.post('/newCodes', (req, res)=>{
     db.query("UPDATE locker SET pickup_code=?, deposit_code=?, admin_password=? WHERE email=?",
     [pickupCode, depositCode, adminCode, email],
     (err,result)=>{
-        console.log(pickupCode);
-        console.log(depositCode)
-        console.log(result);
+        //console.log(pickupCode);
+        //console.log(depositCode)
+        //console.log(result);
         //console.log(email);
         //console.log(password);
         if(err){
@@ -60,6 +60,34 @@ app.post('/newCodes', (req, res)=>{
        
     });
 });
+
+
+app.post('/getPackageStatus', (req, res)=>{
+
+    const email= req.body.email;
+
+    db.query("SELECT Locker_Number FROM backup WHERE occupied_email=?",
+    [email],
+    (err,result)=>{
+        //console.log(email);
+        //console.log(password);
+        console.log(result)
+        if(err){
+            res.send({err:err});
+        }
+        else{
+            if(result.length>0){
+                //console.log(result);
+                res.send({message: "You have packages ready for pickup"});
+            }
+            else{
+                //console.log("Not found");
+                res.send(result);
+            }
+        }
+    });
+});
+
 
 app.post('/newAdminCode', (req, res)=>{
 
