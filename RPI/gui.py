@@ -8,6 +8,8 @@ from locker_communication import setup
 import threading
 from locker_communication import stop_setup
 from security import main
+from locker_communication import restore
+from locker_communication import open_all_lockers
 
 LARGE_FONT= ("Verdana", 12)
 #GPIO.setmode(GPIO.BOARD)
@@ -22,6 +24,7 @@ address=0000
 
 check_keypad=False
 
+restore()
 #lockers.append(locker(b'\x9c\x9c\x1f\xc7\xbf\x78', False))
 
 def start_setup(popup):
@@ -47,43 +50,51 @@ def start_keypad(var):
                 placeholder=1
 
 
-y=threading.Thread(target=main, daemon=True)
+y=threading.Thread(name='Security', target=main, daemon=True)
 y.start()
 
+def setup_helper(popup):
+    popup.set("Setup mode initiated")
+    x = threading.Thread(name='Setup', target=start_setup, args=(popup,), daemon=True)
+    x.start()
 
-def admin_check(code, popup):
+def admin_check(code, popup, controller):
     pad.reset_output()
     admin_code=1111
-    x = threading.Thread(target=start_setup, args=(popup,), daemon=True)
+    #x = threading.Thread(target=start_setup, args=(popup,), daemon=True)
     print("Admin Check Runs")
     if(str(admin_code)==code.get()):
-        x.start()
-        popup.set("Code is correct. Setup Mode Initiated")
+        #x.start()
+        popup.set("Code is correct")
         print(popup.get())
         print("After popup is set")
     else:
         popup.set("Code is incorrect. Try again.")
     code.delete(0,'end')
+    controller.show_frame(Admin_Control)
     
 
 def unassign_locker_helper(pickup_code, popup):
     pad.reset_output()
-    status, number=unassign_locker(pickup_code.get())
+    status, number, locker_unassigned=unassign_locker(pickup_code.get())
     pickup_code.delete(0,'end')
     if(status==True):
         popup.set("Code is Correct. Locker "+ str(number)+ " has opened!")
-    else:
+    elif(status==False):
         popup.set("Code is incorrect. Try again")
+    elif(locker_unassigned==False):
+        popup.set("You do not currently have packages to pick up")
 
 def assign_locker_helper(deposit_code, popup):
     pad.reset_output()
-    status, number=assign_locker(deposit_code.get())
+    status, number, locker_assigned=assign_locker(deposit_code.get())
     deposit_code.delete(0,'end')
-    if(status==True):
+    if(status==True and locker_assigned==True):
         popup.set("Code is Correct. Locker "+ str(number)+ " has opened!")
-    else:
+    elif(status==False):
         popup.set("Code is incorrect. Try again")
-
+    elif(locker_assigned==False):
+        popup.set("No lockers available")
 
 class SeaofBTCapp(tk.Tk):
     def __init__(self, *args, **kwargs):
@@ -98,7 +109,7 @@ class SeaofBTCapp(tk.Tk):
         container.grid_columnconfigure(0, weight=1)
         self.frames = {}
 
-        for F in (StartPage, PageOne, PageTwo, AdminPage):
+        for F in (StartPage, PageOne, PageTwo, AdminPage, Admin_Control):
 
             frame = F(container, self)
 
@@ -147,9 +158,10 @@ class PageOne(tk.Frame):
         tk.Frame.__init__(self, parent)
         label = tk.Label(self, text="Enter Pickup Code", font=LARGE_FONT, bg='#49657b')
         label.pack(pady=10,padx=10)
+        label.pack(pady=10,padx=10)
         self.page1entry=tk.Entry(self)
         self.page1entry.pack(pady=10, padx=10)
-        z=threading.Thread(target=start_keypad, args=(self.page1entry,),daemon=True)
+        z=threading.Thread(name='keypad1', target=start_keypad, args=(self.page1entry,),daemon=True)
         z.start()
         popup=tk.StringVar()
         popup.set("")
@@ -180,7 +192,7 @@ class PageTwo(tk.Frame):
         label.pack(pady=10,padx=10)
         self.entry=tk.Entry(self)
         self.entry.pack(pady=10, padx=10)
-        z=threading.Thread(target=start_keypad, args=(self.entry,),daemon=True)
+        z=threading.Thread(name='keypad2', target=start_keypad, args=(self.entry,),daemon=True)
         z.start()
         popup=tk.StringVar()
         popup.set("")
@@ -207,23 +219,38 @@ class AdminPage(tk.Frame):
         label.pack(pady=10,padx=10)
         self.entry=tk.Entry(self)
         self.entry.pack(pady=10, padx=10)
-        z=threading.Thread(target=start_keypad, args=(self.entry,),daemon=True)
+        z=threading.Thread(name='keypad3',target=start_keypad, args=(self.entry,),daemon=True)
         z.start()
         popup=tk.StringVar()
         popup.set("")
         message=tk.Label(self, textvariable=popup)
-        button4=tk.Button(self, text="Enter Code", command=lambda: admin_check(self.entry, popup), height=2, width=10, bg='#708090')
+        button4=tk.Button(self, text="Enter Code", command=lambda: admin_check(self.entry, popup, controller), height=2, width=10, bg='#708090')
         button4.pack()
-        button5=tk.Button(self,text="End Setup Mode", height=2, width=10,  bg='#708090', command=stop_setup)
-        button5.pack()
         button2 = tk.Button(self, text="Retype Code", height=2, width=10,  bg='#708090', command=self.delete_entry)
         button2.pack()
         button1 = tk.Button(self, text="Back to Home", height=2, width=10,  bg='#708090',
                             command=lambda: controller.show_frame(StartPage))
         button1.pack()
         message.pack()
-        
 
+class Admin_Control(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        label = tk.Label(self, text="Admin Control Page", font=LARGE_FONT, bg='#49657b')
+        label.pack(pady=10,padx=10)
+        popup=tk.StringVar()
+        popup.set("")
+        message=tk.Label(self, textvariable=popup)
+        button1= tk.Button(self,text="Start Setup Mode", height=2, width=10,  bg='#708090', command=lambda: setup_helper(popup))
+        button1.pack(padx=10, pady=10)
+        button2=tk.Button(self,text="End Setup Mode", height=2, width=10,  bg='#708090', command=stop_setup)
+        button2.pack(padx=10, pady=10)
+        button3=tk.Button(self, text="Open All Lockers", height=2, width=10,  bg='#708090', command=open_all_lockers)
+        button3.pack(padx=10, pady=10)
+        button4 = tk.Button(self, text="Back to Home", height=2, width=10,  bg='#708090',
+                            command=lambda: controller.show_frame(StartPage))
+        button4.pack(padx=10, pady=10)
+        message.pack()
         
         
         

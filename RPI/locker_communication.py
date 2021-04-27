@@ -13,6 +13,7 @@ from email.message import EmailMessage
 import RPi.GPIO as GPIO
 import time
 import pickle
+import ast
 
 # setup RE / WE pin on RPI
 RS485_EN_PIN = 4
@@ -27,12 +28,74 @@ class locker:
     address=b'\x00\x00\x1b\x00\xbf'
     occupied=True
     email=''
-    number=0
-    def __init__(self, address, occupied, number):
+    unit_ID='0'
+    number=76
+    unit_ID='0'
+    def __init__(self, address, occupied, number, unit_ID, email):
         self.address=address
         self.occupied=occupied
         self.number=number
+        self.unit_ID=unit_ID
+        self.email=email
 
+
+
+def getserial():
+  # Extract serial from cpuinfo file
+  cpuserial = "0000000000000000"
+  try:
+    f = open('/proc/cpuinfo','r')
+    for line in f:
+      if line[0:6]=='Serial':
+        cpuserial = line[10:26]
+    f.close()
+  except:
+    cpuserial = "ERROR000000000"
+ 
+  return cpuserial
+
+def bytes_to_str(b):
+    ret = ''
+    for each_byte in b:
+        ret += str(int(each_byte)) + ':'
+    ret = ret [:-1]
+    return ret
+
+def str_to_bytes(s):
+    arr = s.split(':')
+    ret = b''
+    for each_int in arr:
+        ret += int(each_int).to_bytes(1, byteorder = 'little')
+    return ret
+
+def restore():
+    mydb= mysql.connector.connect(
+        host="98.212.157.222",
+        user= "ece445",
+        password= "ECE 445 Team 61",
+        database= "locker",
+        auth_plugin='mysql_native_password'
+        )
+    mycursor=mydb.cursor()
+    sql='SELECT * from backup WHERE ID=%s'
+    val=(getserial(),)
+    mycursor.execute(sql, val)
+    result=mycursor.fetchall()
+    print(result)
+    for i in range(len(result)):
+        occupied=False
+        if(result[i][3]!='NULL'):
+            occupied=True
+        lockers.append(locker(str_to_bytes(result[i][2]), occupied, result[i][1], result[i][0], result[i][3]))
+
+def string_to_hext(string):
+    h=[]
+    for i in range(len(string)):
+        if(string[i]=='x'):
+            hex.append(string[i+1]+string[i+2])
+    h=[]
+    for i in range(len(h)):
+        h[i]=hex(int(h[i],16))
 
 
 def setup():
@@ -55,18 +118,42 @@ def setup():
             addresses.add(received_data)
             print(received_data)
     lockers=[]
+    mySerial=getserial()
     for address in addresses:
-        lockers.append(locker(address, False, len(lockers)+1))
+        lockers.append(locker(address, False, len(lockers)+1, mySerial, ''))
     print(len(lockers))
     ser.close()
     for i in range(len(lockers)):
         print("Locker address: ", lockers[i].address)
+        print(lockers[i].unit_ID)
+    print(mySerial)
+    mydb= mysql.connector.connect(
+        host="98.212.157.222",
+        user= "ece445",
+        password= "ECE 445 Team 61",
+        database= "locker",
+        auth_plugin='mysql_native_password'
+        )
+    mycursor=mydb.cursor()
+    #mycursor.get_warning = True
+    value=(mySerial,)
+    mycursor.execute("SELECT ID FROM backup WHERE ID= %s", value)
+    result=mycursor.fetchall()
+    if(len(result)>0):
+        mycursor.execute("DELETE FROM backup WHERE ID= %s", value)
+    sql="INSERT INTO backup (ID, Locker_Number, Address, occupied_email) VALUES(%s,%s,%s,%s) "
+    for i in range(len(lockers)):
+        val=(mySerial, lockers[i].number, bytes_to_str(lockers[i].address), "NULL")
+        mycursor.execute(sql,val)
+        print("Number of rows affected: ", mycursor.rowcount)
+    mydb.commit()
+    mydb.close()
     return lockers
 
-def dropoff_email(email):
+def dropoff_email(email, number):
     try:
         msg = EmailMessage()
-        msg.set_content('A package has arrived for you.')
+        msg.set_content('A package has arrived for you in locker number '+str(number)+'.')
 
         msg['Subject'] = 'New Package'
         msg['From'] = "ece445lockertest@gmail.com"
@@ -83,7 +170,7 @@ def dropoff_email(email):
 def pickup_email(email):
     try:
         msg = EmailMessage()
-        msg.set_content('A package at your locker has just been picked up.')
+        msg.set_content('A package has just been picked up. If you did not recieve this package please contact your administrator.')
 
         msg['Subject'] = 'New Package'
         msg['From'] = "ece445lockertest@gmail.com"
@@ -97,7 +184,11 @@ def pickup_email(email):
     except:
         print("Not a valid email")
 
-    
+def open_all_lockers():
+    for i in range(len(lockers)):
+        open_locker(lockers[i].address)
+        time.sleep(8)    
+
     
 def find_user_deposit(deposit_code):
     mydb= mysql.connector.connect(
@@ -113,13 +204,16 @@ def find_user_deposit(deposit_code):
     result=mycursor.fetchall()
     print(result)
     found=False
-    mydb.close()
+    #mydb.close()
     email=''
     if(len(result)!=0):
         found=True
         email=result[0][0]
     if(len(deposit_code)<4):
         found=False
+    # value=(getserial(), )
+    # mycursor.execute("UPDATE backup SET occupied_email =%s WHERE (ID, Locker_Number)=(%s,%s)", value)
+    # result=mycursor.fetchall()
     return(found, email)
 
 def find_user_pickup(pickup_code):
@@ -148,24 +242,52 @@ def assign_locker(deposit_code):
     print("status "+str(status))
     print("Length of Lockers: "+str(len(lockers)))
     number=0
+    locker_assigned=False
+    mydb= mysql.connector.connect(
+        host="98.212.157.222",
+        user= "ece445",
+        password= "ECE 445 Team 61",
+        database= "locker",
+        auth_plugin='mysql_native_password'
+        )
+    mycursor=mydb.cursor()
     if(status==True):
         for i in range(len(lockers)):
             print("loop runs")
+            
             if(lockers[i].occupied==False):
                 print("If statement runs")
                 lockers[i].occupied=True
                 lockers[i].email=email
                 number=lockers[i].number
                 open_locker(lockers[i].address)
-                dropoff_email(email)
+                dropoff_email(email, lockers[i].number)
+                sql='UPDATE backup SET occupied_email=%s WHERE ID=%s and Locker_Number=%s'
+                vals=(email, lockers[i].unit_ID, lockers[i].number)
+                print(vals)
+                mycursor.execute(sql, vals)
+                print("Locker Number: ", lockers[i].number)
+                print("Length of lockers: ", len(lockers))
+                locker_assigned=True
+                mydb.commit()
+                mydb.close()
                 break
-        
-    return status, number
+        print("Number sent to GUI: ", number)
+    return status, number, locker_assigned
         
             
 def unassign_locker(pickup_code):
     status,email=find_user_pickup(pickup_code)
     number=0
+    locker_unassigned=False
+    mydb= mysql.connector.connect(
+        host="98.212.157.222",
+        user= "ece445",
+        password= "ECE 445 Team 61",
+        database= "locker",
+        auth_plugin='mysql_native_password'
+        )
+    mycursor=mydb.cursor()
     if(status==True):
         for i in range(len(lockers)):
             if(lockers[i].email==email):
@@ -175,8 +297,14 @@ def unassign_locker(pickup_code):
                 open_locker(lockers[i].address)
                 print("email" + lockers[i].email)
                 pickup_email(email)
-                break
-    return status, number
+                locker_unassigned=True
+                sql='UPDATE backup SET occupied_email=%s WHERE ID=%s and Locker_Number=%s'
+                vals=('NULL', lockers[i].unit_ID, lockers[i].number)
+                mycursor.execute(sql, vals)
+                time.sleep(8)
+    mydb.commit()
+    mydb.close()
+    return status, number, locker_unassigned
 
 def stop_setup():
     global setup_mode
@@ -214,7 +342,5 @@ def read():
 #dropoff_email('email')
 #open_locker(b'432432423')
 #read()
-
-
 
     
