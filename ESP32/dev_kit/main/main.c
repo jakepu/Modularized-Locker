@@ -40,7 +40,7 @@ static void uart_send(const int port, const uint8_t* str, uint8_t length)
         // ESP_LOGE(TAG, "Send data critical failure.");
         // add your code to handle sending failure here
         printf("uart_send failed");
-        abort();
+        // abort();
     }
 }
 
@@ -58,7 +58,7 @@ static void monitor_uart_task(void *arg)
         .data_bits = UART_DATA_8_BITS,
         .parity = UART_PARITY_EVEN,
         .stop_bits = UART_STOP_BITS_1,
-        .flow_ctrl = UART_MODE_RS485_HALF_DUPLEX,        // no need for RS485 mode since it just uses RX
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,        // no need for RS485 mode since it just uses RX
         .rx_flow_ctrl_thresh = 122,
         // .source_clk = UART_SCLK_APB,
     };
@@ -67,10 +67,10 @@ static void monitor_uart_task(void *arg)
     ESP_ERROR_CHECK(uart_param_config(UART_USED, &uart_config));
 
     // Set UART pins(TX: IO17 (UART1 default), RX: IO18 (UART1 default), RTS: IO19, CTS: IO20)
-    ESP_ERROR_CHECK(uart_set_pin(UART_USED, 17, 16, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+    ESP_ERROR_CHECK(uart_set_pin(UART_USED, 17, 16, 21, 34));
 
     ESP_ERROR_CHECK(uart_driver_install(UART_USED, UART_BUF_SIZE, UART_BUF_SIZE, EVENT_QUEUE_SIZE, &uart1_queue, 0));
-
+    ESP_ERROR_CHECK(uart_set_mode(UART_USED, UART_MODE_RS485_HALF_DUPLEX));
     // Allocate buffers for UART
     uint8_t data[UART_BUF_SIZE] = {0};
 
@@ -144,12 +144,11 @@ void setup_reset_button() {
     io_conf.pin_bit_mask = 1ULL << RESET_MODE_PIN;
     //set as input mode
     io_conf.mode = GPIO_MODE_INPUT;
-    //enable pull-up mode
-    io_conf.pull_up_en = 1;
+    io_conf.pull_up_en = 0;
+    io_conf.pull_down_en = 0;
     ESP_ERROR_CHECK(gpio_config(&io_conf));
     ESP_ERROR_CHECK(gpio_install_isr_service(0));
     ESP_ERROR_CHECK(gpio_isr_handler_add(RESET_MODE_PIN, reset_isr_handler, NULL));
-    ESP_ERROR_CHECK(gpio_set_level(RESET_MODE_PIN, 1));
     gpio_evt_queue = xQueueCreate(1, sizeof(uint8_t));
 }
 
