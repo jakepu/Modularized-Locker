@@ -81,7 +81,7 @@ def restore():
     val=(getserial(),)
     mycursor.execute(sql, val)
     result=mycursor.fetchall()
-    print(result)
+    #print(result)
     for i in range(len(result)):
         occupied=False
         if(result[i][3]!='NULL'):
@@ -116,17 +116,13 @@ def setup():
         received_data += ser.read(data_left)
         if(len(received_data)>3):
             addresses.add(received_data)
-            print(received_data)
+            #print(received_data)
     lockers=[]
     mySerial=getserial()
     for address in addresses:
         lockers.append(locker(address, False, len(lockers)+1, mySerial, ''))
-    print(len(lockers))
+    #print(len(lockers))
     ser.close()
-    for i in range(len(lockers)):
-        print("Locker address: ", lockers[i].address)
-        print(lockers[i].unit_ID)
-    print(mySerial)
     mydb= mysql.connector.connect(
         host="98.212.157.222",
         user= "ece445",
@@ -145,7 +141,7 @@ def setup():
     for i in range(len(lockers)):
         val=(mySerial, lockers[i].number, bytes_to_str(lockers[i].address), "NULL")
         mycursor.execute(sql,val)
-        print("Number of rows affected: ", mycursor.rowcount)
+        #print("Number of rows affected: ", mycursor.rowcount)
     mydb.commit()
     mydb.close()
     return lockers
@@ -202,7 +198,7 @@ def find_user_deposit(deposit_code):
     value=(deposit_code,)
     mycursor.execute("SELECT email FROM locker WHERE deposit_code= %s", value)
     result=mycursor.fetchall()
-    print(result)
+    #print(result)
     found=False
     #mydb.close()
     email=''
@@ -239,8 +235,8 @@ def find_user_pickup(pickup_code):
 
 def assign_locker(deposit_code):
     status,email=find_user_deposit(deposit_code)
-    print("status "+str(status))
-    print("Length of Lockers: "+str(len(lockers)))
+    #print("status "+str(status))
+    #print("Length of Lockers: "+str(len(lockers)))
     number=0
     locker_assigned=False
     mydb= mysql.connector.connect(
@@ -253,10 +249,10 @@ def assign_locker(deposit_code):
     mycursor=mydb.cursor()
     if(status==True):
         for i in range(len(lockers)):
-            print("loop runs")
+            #print("loop runs")
             
             if(lockers[i].occupied==False):
-                print("If statement runs")
+               # print("If statement runs")
                 lockers[i].occupied=True
                 lockers[i].email=email
                 number=lockers[i].number
@@ -264,21 +260,21 @@ def assign_locker(deposit_code):
                 dropoff_email(email, lockers[i].number)
                 sql='UPDATE backup SET occupied_email=%s WHERE ID=%s and Locker_Number=%s'
                 vals=(email, lockers[i].unit_ID, lockers[i].number)
-                print(vals)
+                #print(vals)
                 mycursor.execute(sql, vals)
-                print("Locker Number: ", lockers[i].number)
-                print("Length of lockers: ", len(lockers))
+                #print("Locker Number: ", lockers[i].number)
+                #print("Length of lockers: ", len(lockers))
                 locker_assigned=True
                 mydb.commit()
                 mydb.close()
                 break
-        print("Number sent to GUI: ", number)
+        #print("Number sent to GUI: ", number)
     return status, number, locker_assigned
         
             
 def unassign_locker(pickup_code):
     status,email=find_user_pickup(pickup_code)
-    number=0
+    numbers=[]
     locker_unassigned=False
     mydb= mysql.connector.connect(
         host="98.212.157.222",
@@ -293,9 +289,9 @@ def unassign_locker(pickup_code):
             if(lockers[i].email==email):
                 lockers[i].occupied=False
                 lockers[i].email=''
-                number=lockers[i].number
+                numbers.append(lockers[i].number)
                 open_locker(lockers[i].address)
-                print("email" + lockers[i].email)
+               # print("email" + lockers[i].email)
                 pickup_email(email)
                 locker_unassigned=True
                 sql='UPDATE backup SET occupied_email=%s WHERE ID=%s and Locker_Number=%s'
@@ -304,15 +300,15 @@ def unassign_locker(pickup_code):
                 time.sleep(8)
     mydb.commit()
     mydb.close()
-    return status, number, locker_unassigned
+    return status, numbers, locker_unassigned
 
 def stop_setup():
     global setup_mode
-    print("This runs")
+    #print("This runs")
     setup_mode=False
 
 def open_locker(address):
-    print("Open Locker Runs")
+    #print("Open Locker Runs")
     #ser = serial.Serial(port, baudrate, serial.EIGHTBITS, serial.PARITY_EVEN, serial.STOPBITS_ONE)
     #input=bytearray(address)
     #print(input)
@@ -321,13 +317,13 @@ def open_locker(address):
     baudrate=115200
     ser = serial.Serial(port, baudrate, serial.EIGHTBITS, serial.PARITY_EVEN, serial.STOPBITS_ONE, timeout=1)
     #ser.open()
-    print("Line before write")
-    print(address)
+    #print("Line before write")
+    #print(address)
     GPIO.output(RS485_EN_PIN, GPIO.HIGH)            # Turn on DE, turn off RE
     ser.write(address)
     time.sleep(0.5)
     GPIO.output(RS485_EN_PIN, GPIO.LOW)             # Turn on RE, turn off DE
-    print("Line after write")
+    #print("Line after write")
     ser.close()
 
 def read():
