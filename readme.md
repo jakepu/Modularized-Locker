@@ -1,6 +1,6 @@
 # Modularized Smart Locker
 
-This is the GitHub site for Team 61 in 2021 Fall ECE 445 Senior Design Lab. We designed a modularized smart locker solution to lower the cost of making a smart locker like Amazon Hub Locker while providing a template full-stack solution to manufacturers to produce just 2 modules that can fulfill the various needs for a smart locker. By using 1 control modules and 1-127 locker modules (limited by RS485), we can provide a secure & smart locker solution to household customers and apartment owners.
+This is the GitHub site for Team 61 in 2021 Spring ECE 445 Senior Design Lab. We designed a modularized smart locker solution to lower the cost of making a smart locker like Amazon Hub Locker while providing a template full-stack solution to manufacturers to produce just 2 modules that can fulfill the various needs for a smart locker. By using 1 control modules and 1-127 locker modules (limited by RS485), we can provide a secure & smart locker solution to household customers and apartment owners.
 
 **[Video Demo](https://www.youtube.com/watch?v=GHPYQF2T6pg)**
 
