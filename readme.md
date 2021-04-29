@@ -68,8 +68,8 @@ This is the GitHub site for Team 61 in 2021 Fall ECE 445 Senior Design Lab. We d
 
 There are few things that we have not done but we think could be done to push this idea to perfection.
 
-- [] **Huge and Important Change**: Change UART on RS485 to I2C Differential. I2C is already a very mature protocol that supports multi-master multi-slave mode and handles collision elegantly. Putting I2C on differential signal can deliver signal to at least 3 meters far (much farther given our low bandwidth requirement & matching clock frequency. In this way, we can easily check the delivery status of the messages on the bus. The I2C addressing is also very helpful so that we do not have to do it ourselves. A suggested chip is the [NXP’s PCA9615 IC](https://www.nxp.com/docs/en/data-sheet/PCA9615.pdf).  
-- [] RPI CPU usage is very high when it is running gui.py. The cpu would overheat and throttle leading to wrong keypad input.
-- [] Redesign our schematics and PCB so that we do not have to cut the PCB to have a functional circuit.
-  - [] Redesign schematics
-  - [] Redesign PCB
+- [ ] **Huge and Important Change**: Change UART on RS485 to I2C Differential. I2C is already a very mature protocol that supports multi-master multi-slave mode and handles collision elegantly. Putting I2C on differential signal can deliver signal to at least 3 meters far (much farther given our low bandwidth requirement & matching clock frequency. In this way, we can easily check the delivery status of the messages on the bus. The I2C addressing is also very helpful so that we do not have to do it ourselves. A suggested chip is the [NXP’s PCA9615 IC](https://www.nxp.com/docs/en/data-sheet/PCA9615.pdf).  
+- [ ] RPI CPU usage is very high when it is running gui.py. The cpu would overheat and throttle leading to wrong keypad input.
+- [ ] Redesign our schematics and PCB so that we do not have to cut the PCB to have a functional circuit.
+  - [ ] Redesign schematics
+  - [ ] Redesign PCB
